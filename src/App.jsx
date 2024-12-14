@@ -1,3 +1,4 @@
+import { useState } from "react";
 import "./App.css";
 import { User, MessageCircle, X, Heart } from "lucide-react"; //icon for profile and chat
 
@@ -76,14 +77,24 @@ const MatchesList = () => {
 };
 
 function App() {
+  const [currentScreen, setCurrentScreen] = useState("profile");
+
+  const renderScreen = () => {
+    switch (currentScreen) {
+      case "profile":
+        return <ProfileSelector />;
+      case "matches":
+        return <MatchesList />;
+    }
+  };
   return (
     <div className="max-w-md mx-auto p-4">
       <nav className="flex justify-between mb-4">
-        <User />
-        <MessageCircle />
+        <User onClick={() => setCurrentScreen("profile")} />
+        <MessageCircle onClick={() => setCurrentScreen("m atches")} />
       </nav>
-      <ProfileSelector />
-      {/* <MatchesList /> */}
+
+      {renderScreen()}
     </div>
   );
 }
