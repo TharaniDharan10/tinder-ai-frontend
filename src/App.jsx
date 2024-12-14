@@ -145,7 +145,7 @@ function App() {
     <div className="max-w-md mx-auto p-4">
       <nav className="flex justify-between mb-4">
         <User onClick={() => setCurrentScreen("profile")} />
-        <MessageCircle onClick={() => setCurrentScreen("m  atches")} />
+        <MessageCircle onClick={() => setCurrentScreen("matches")} />
       </nav>
 
       {renderScreen()}
