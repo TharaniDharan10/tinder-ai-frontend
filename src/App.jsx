@@ -1,24 +1,47 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import { User, MessageCircle, X, Heart } from "lucide-react"; //icon for profile and chat
 
-const ProfileSelector = () => {
-  return (
+const fetchRandomProfile = async () => {
+  const response = await fetch("http://localhost:8080/profiles/random");
+  if (!response.ok) {
+    throw new Error("Failed to fetch profile");
+  }
+  return response.json();
+};
+
+const saveSwipe = async (profileId) => {
+  const response = await fetch("http://localhost:8080/matches", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ profileId }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to save swipe");
+  }
+};
+
+const ProfileSelector = ({ profile, onSwipe }) => {
+  return profile ? (
     <div className="rounded-lg overflow-hidden bg-white shadow-lg">
       <div className="relative">
-        <img src="http://169.254.196.227:8080/18667376-a68b-48d1-8331-a78f26caaea1.jpg" />
+        <img src={`http://127.0.0.1:8081/` + profile.imageUrl} />
         <div className="absolute bottom-0 left-0 right-0 text-white p-4 bg-gradient-to-t from-black">
-          <h2 className="text-3xl font-bold ">Foo Bar, 30 </h2>
+          <h2 className="text-3xl font-bold ">
+            {profile.firstName} {profile.lastName}, {profile.age}
+          </h2>
         </div>
       </div>
       <div className="p4">
-        <p className="text-gray-600 mb-4">I am an Engineer</p>
+        <p className="text-gray-600 mb-4">{profile.bio}</p>
       </div>
       <div className="p-4 flex justify-center space-x-4">
         <button
           className="bg-red-500 rounded-full p-4 text-white  hover:bg-red-700 "
           onClick={() => {
-            console.log("left");
+            onSwipe(profile.id, "left");
           }}
         >
           <X size={24} />
@@ -26,13 +49,15 @@ const ProfileSelector = () => {
         <button
           className="bg-green-500 rounded-full p-4 text-white hover:bg-green-700"
           onClick={() => {
-            console.log("right");
+            onSwipe(profile.id, "right");
           }}
         >
           <Heart size={24} />
         </button>
       </div>
     </div>
+  ) : (
+    <div>Loading...</div>
   );
 };
 
@@ -132,16 +157,38 @@ const ChatScreen = () => {
 };
 
 function App() {
+  const loadRandomProfile = async () => {
+    try {
+      const profile = await fetchRandomProfile();
+      setCurrentProfile(profile);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    loadRandomProfile();
+  }, []);
+
   const [currentScreen, setCurrentScreen] = useState("profile");
+  const [currentProfile, setCurrentProfile] = useState(null);
+  const onSwipe = (profileId, direction) => {
+    if (direction === "right") {
+      saveSwipe(profileId);
+    }
+    loadRandomProfile();
+  };
 
   const renderScreen = () => {
     switch (currentScreen) {
       case "profile":
-        return <ProfileSelector />;
+        return <ProfileSelector profile={currentProfile} onSwipe={onSwipe} />;
       case "matches":
         return <MatchesList onSelectMatch={() => setCurrentScreen("chat")} />;
       case "chat":
         return <ChatScreen />;
+      default:
+        return <div>Screen not found</div>;
     }
   };
   return (
@@ -159,6 +206,7 @@ function App() {
 export default App;
 
 // cli imports we have made
-// npm install -D tailwindcss postcss autoprefixer    (command to install tailwind) (-D -> adds these in dev dependencies in package.json )
+// npm import { response } from 'express';
+//install -D tailwindcss postcss autoprefixer    (command to install tailwind) (-D -> adds these in dev dependencies in package.json )
 // npm install lucide-react  (library for icons)
 // npx tailwindcss init -p   (to initialise tailwind.config.js & postcss.config.js)
