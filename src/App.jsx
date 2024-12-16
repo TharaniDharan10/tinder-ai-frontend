@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
 import "./App.css";
-import { User, MessageCircle, X, Heart } from "lucide-react"; //icon for profile and chat
+import { User, MessageCircle, X, Heart, Send } from "lucide-react"; //icon for profile and chat
+
+import React, { useState, useEffect } from "react";
 
 const fetchRandomProfile = async () => {
   const response = await fetch("http://localhost:8080/profiles/random");
@@ -32,17 +33,21 @@ const fetchMatches = async () => {
 };
 
 const fetchConversation = async (conversationId) => {
-  console.log("Fetching conversation: " + conversationId);
+  console.log("fetching conversation: " + conversationId);
   const response = await fetch(
     `http://localhost:8080/conversations/${conversationId}`
   );
   if (!response.ok) {
-    throw new Error("Failed to fetch conversations");
+    throw new Error("Failed to fetch conversation");
   }
   return response.json();
 };
 
 const sendMessage = async (conversationId, message) => {
+  console.log("Sending to conversationId:", conversationId);
+
+  // let date = "Sun Feb 16 2020 23:00:00 GMT+0100";
+
   const response = await fetch(
     `http://localhost:8080/conversations/${conversationId}`,
     {
@@ -50,42 +55,53 @@ const sendMessage = async (conversationId, message) => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ messageText: message, authorId: 1 }),
+      body: JSON.stringify({
+        messageText: message,
+        authorId: "user",
+        // messageTime: new Date(date).toUTCString(),
+      }),
     }
   );
   if (!response.ok) {
     throw new Error("Failed to submit message");
   }
+  // if (!response.ok) {
+  //   const errorData = await response
+  //     .json()
+  //     .catch(() => ({ error: "Unknown error" })); // Attempt to parse error details
+  //   const errorMessage =
+  //     errorData.error || `HTTP error! status: ${response.status}`;
+  //   console.error("Fetch error:", errorMessage, response); // Log the error details
+  //   alert(`Error sending message: ${errorMessage}`); // Display a user-friendly message
+  //   throw new Error(errorMessage); // Re-throw the error for further handling if needed
+  // }
+  return response.json();
 };
 
-const ProfileSelector = ({ profile, onSwipe }) => {
-  return profile ? (
+const ProfileSelector = ({ profile, onSwipe }) =>
+  profile ? (
     <div className="rounded-lg overflow-hidden bg-white shadow-lg">
       <div className="relative">
-        <img src={`http://127.0.0.1:8081/` + profile.imageUrl} />
+        <img src={"http://localhost:8080/images/" + profile.imageUrl} />
         <div className="absolute bottom-0 left-0 right-0 text-white p-4 bg-gradient-to-t from-black">
-          <h2 className="text-3xl font-bold ">
+          <h2 className="text-3xl font-bold">
             {profile.firstName} {profile.lastName}, {profile.age}
           </h2>
         </div>
       </div>
-      <div className="p4">
+      <div className="p-4">
         <p className="text-gray-600 mb-4">{profile.bio}</p>
       </div>
       <div className="p-4 flex justify-center space-x-4">
         <button
-          className="bg-red-500 rounded-full p-4 text-white  hover:bg-red-700 "
-          onClick={() => {
-            onSwipe(profile.id, "left");
-          }}
+          className="bg-red-500 rounded-full p-4 text-white hover:bg-red-700"
+          onClick={() => onSwipe(profile.id, "left")}
         >
           <X size={24} />
         </button>
         <button
           className="bg-green-500 rounded-full p-4 text-white hover:bg-green-700"
-          onClick={() => {
-            onSwipe(profile.id, "right");
-          }}
+          onClick={() => onSwipe(profile.id, "right")}
         >
           <Heart size={24} />
         </button>
@@ -94,21 +110,20 @@ const ProfileSelector = ({ profile, onSwipe }) => {
   ) : (
     <div>Loading...</div>
   );
-};
 
 const MatchesList = ({ matches, onSelectMatch }) => {
   return (
-    <div className="rounded-lg shadow-lg p-4 ">
+    <div className="rounded-lg shadow-lg p-4">
       <h2 className="text-2xl font-bold mb-4">Matches</h2>
       <ul>
         {matches.map((match, index) => (
           <li key={index} className="mb-2">
             <button
+              className="w-full hover:bg-gray-100 rounded flex item-center"
               onClick={() => onSelectMatch(match.profile, match.conversationId)}
-              className="flex w-full hover:bg-gray-100 rounded items-center"
             >
               <img
-                src={`http://127.0.0.1:8081/` + match.profile.imageUrl}
+                src={"http://localhost:8080/images/" + match.profile.imageUrl}
                 className="w-16 h-16 rounded-full mr-3 object-cover"
               />
               <span>
@@ -127,8 +142,14 @@ const MatchesList = ({ matches, onSelectMatch }) => {
 const ChatScreen = ({ currentMatch, conversation, refreshState }) => {
   const [input, setInput] = useState("");
 
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend(conversation, input);
+    }
+  };
+
   const handleSend = async (conversation, input) => {
-    console.log(currentMatch, conversation, input);
     if (input.trim()) {
       await sendMessage(conversation.id, input);
       setInput("");
@@ -139,31 +160,61 @@ const ChatScreen = ({ currentMatch, conversation, refreshState }) => {
   return currentMatch ? (
     <div className="rounded-lg shadow-lg p-4">
       <h2 className="text-2xl font-bold mb-4">
-        Chat with {currentMatch.firstName} {currentMatch.lastName}
+        Chat with {currentMatch.firstName} {currentMatch.lastName}{" "}
       </h2>
-      <div className="h-[50vh] border rounded overflow-y-auto mb-4 p-2">
+      <div className="h-[50vh] border rounded-lg overflow-y-auto mb-6 p-4 bg-gray-50">
         {/* h-[50vh] ensures that the chat screen size in vertical height doesnot stretch out as convo increases */}
         {conversation.messages.map((message, index) => (
-          <div key={index}>
-            <div className="mb-4 p-2 rounded bg-gray-200">
-              {message.messageText}
+          <div
+            key={index}
+            className={`flex ${
+              message.authorId === "user" ? "justify-end" : "justify-start"
+            } mb-4`}
+          >
+            <div
+              className={`flex items-end ${
+                message.authorId === "user" ? "flex-row-reverse" : "flex-row"
+              }`}
+            >
+              {message.authorId === "user" ? (
+                <img
+                  src="http://localhost:8080/images/user.jpg"
+                  className="w-11 h-11 rounded-full"
+                />
+              ) : (
+                // <User size={15} />
+                <img
+                  src={`http://localhost:8080/images/${currentMatch.imageUrl}`}
+                  className="w-11 h-11 rounded-full"
+                />
+              )}
+              <div
+                className={`max-w-xs px-4 py-2 rounded-2xl ${
+                  message.authorId === "user"
+                    ? "bg-blue-500 text-white ml-2"
+                    : "bg-gray-200 text-gray-800 mr-2"
+                }`}
+              >
+                {message.messageText}
+              </div>
             </div>
           </div>
         ))}
       </div>
-      <div className="flex">
+      <div className="flex items-center">
         <input
           type="text"
-          className="border flex-1 rounded p-2 mr-2"
-          placeholder="Type a message..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyPress={handleKeyPress}
+          className="flex-1 border-2 border-gray-300 rounded-full py-2 px-4 mr-2 focus:outline-none focus:border-blue-500"
+          placeholder="Type a message..."
         />
         <button
-          className="bg-blue-500 text-white rounded p-2"
+          className="bg-blue-500 text-white rounded-full p-2 hover:bg-blue-600 transition-colors duration-200"
           onClick={() => handleSend(conversation, input)}
         >
-          Send
+          <Send size={24} />
         </button>
       </div>
     </div>
@@ -244,8 +295,6 @@ function App() {
             refreshState={refreshChatState}
           />
         );
-      default:
-        return <div>Screen not found</div>;
     }
   };
   return (
@@ -254,14 +303,12 @@ function App() {
         <User onClick={() => setCurrentScreen("profile")} />
         <MessageCircle onClick={() => setCurrentScreen("matches")} />
       </nav>
-
       {renderScreen()}
     </div>
   );
 }
 
 export default App;
-
 // cli imports we have made
 // npm import { response } from 'express';
 //install -D tailwindcss postcss autoprefixer    (command to install tailwind) (-D -> adds these in dev dependencies in package.json )
