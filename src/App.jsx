@@ -46,7 +46,6 @@ const fetchConversation = async (conversationId) => {
 const sendMessage = async (conversationId, message) => {
   console.log("Sending to conversationId:", conversationId);
 
-  // let date = "Sun Feb 16 2020 23:00:00 GMT+0100";
 
   const response = await fetch(
     `http://localhost:8080/conversations/${conversationId}`,
@@ -58,7 +57,6 @@ const sendMessage = async (conversationId, message) => {
       body: JSON.stringify({
         messageText: message,
         authorId: "user",
-        // messageTime: new Date(date).toUTCString(),
       }),
     }
   );
